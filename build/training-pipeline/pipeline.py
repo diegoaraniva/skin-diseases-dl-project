@@ -6,11 +6,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Tuple
 
-import numpy as np
-import tensorflow as tf
-from sklearn.metrics import accuracy_score, f1_score
-from sklearn.model_selection import train_test_split
-
 
 DEFAULT_CROISSANT_URL = (
     "https://www.kaggle.com/datasets/anieetorudofia/"
@@ -102,12 +97,14 @@ def _list_image_files(dataset_dir: Path) -> Tuple[List[str], List[int], List[str
 
 
 def _build_tf_dataset(
-    paths: np.ndarray,
-    labels: np.ndarray,
+    paths,
+    labels,
     image_size: int,
     batch_size: int,
     training: bool,
-) -> tf.data.Dataset:
+):
+    import tensorflow as tf
+
     autotune = tf.data.AUTOTUNE
 
     path_ds = tf.data.Dataset.from_tensor_slices(paths)
@@ -131,6 +128,12 @@ def _build_tf_dataset(
 
 
 def train_and_export(config: TrainConfig) -> Dict[str, object]:
+    import json
+    import numpy as np
+    import tensorflow as tf
+    from sklearn.metrics import accuracy_score, f1_score
+    from sklearn.model_selection import train_test_split
+
     dataset_dir = _resolve_dataset_dir(config)
     output_dir = Path(config.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)

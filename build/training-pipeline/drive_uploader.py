@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import importlib
 from pathlib import Path
 from typing import Dict, List
 
@@ -11,11 +12,11 @@ TOKEN_FILENAME = "gdrive_token.json"
 
 def _require_google_deps() -> tuple:
     try:
-        from google.auth.transport.requests import Request
-        from google.oauth2.credentials import Credentials
-        from google_auth_oauthlib.flow import InstalledAppFlow
-        from googleapiclient.discovery import build
-        from googleapiclient.http import MediaFileUpload
+        Request = importlib.import_module("google.auth.transport.requests").Request
+        Credentials = importlib.import_module("google.oauth2.credentials").Credentials
+        InstalledAppFlow = importlib.import_module("google_auth_oauthlib.flow").InstalledAppFlow
+        build = importlib.import_module("googleapiclient.discovery").build
+        MediaFileUpload = importlib.import_module("googleapiclient.http").MediaFileUpload
     except ImportError as e:  # pragma: no cover
         raise ImportError(
             "Faltan dependencias de Google Drive. Instala google-auth, google-auth-oauthlib y google-api-python-client."
@@ -52,7 +53,7 @@ def finish_oauth_flow(client_secret_file: str, auth_code: str, state: str, token
     return str(token_path)
 
 
-def _load_credentials(token_file: str) -> Credentials:
+def _load_credentials(token_file: str):
     Request, Credentials, _, _, _ = _require_google_deps()
     token_path = Path(token_file)
     if not token_path.exists():
