@@ -6,6 +6,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Tuple
 
+import importlib
+import subprocess
+import sys
+
 
 DEFAULT_CROISSANT_URL = (
     "https://www.kaggle.com/datasets/anieetorudofia/"
@@ -42,18 +46,21 @@ class DatasetError(ValueError):
     pass
 
 
+def _import_or_install(module_name: str, package_name: str):
+    try:
+        return importlib.import_module(module_name)
+    except ImportError:
+        subprocess.run([sys.executable, "-m", "pip", "install", package_name], check=True)
+        return importlib.import_module(module_name)
+
+
 def _resolve_dataset_dir(config: TrainConfig) -> Path:
     dataset_dir = Path(config.dataset_dir).expanduser() if config.dataset_dir else None
     if dataset_dir and dataset_dir.exists() and not config.use_kagglehub_dataset:
         return dataset_dir
 
     if config.use_kagglehub_dataset:
-        try:
-            import kagglehub
-        except ImportError as e:  # pragma: no cover
-            raise DatasetError(
-                "Falta la dependencia 'kagglehub'. Instala requirements.txt y vuelve a intentar."
-            ) from e
+        kagglehub = _import_or_install("kagglehub", "kagglehub>=0.3.8")
 
         downloaded_path = Path(kagglehub.dataset_download(config.kaggle_dataset_slug))
         if not downloaded_path.exists():
@@ -129,10 +136,11 @@ def _build_tf_dataset(
 
 def train_and_export(config: TrainConfig) -> Dict[str, object]:
     import json
-    import numpy as np
-    import tensorflow as tf
-    from sklearn.metrics import accuracy_score, f1_score
-    from sklearn.model_selection import train_test_split
+    np = _import_or_install("numpy", "numpy>=1.24.0")
+    tf = _import_or_install("tensorflow", "tensorflow==2.17.1")
+    accuracy_score = _import_or_install("sklearn.metrics", "scikit-learn>=1.3.0").accuracy_score
+    f1_score = _import_or_install("sklearn.metrics", "scikit-learn>=1.3.0").f1_score
+    train_test_split = _import_or_install("sklearn.model_selection", "scikit-learn>=1.3.0").train_test_split
 
     dataset_dir = _resolve_dataset_dir(config)
     output_dir = Path(config.output_dir)

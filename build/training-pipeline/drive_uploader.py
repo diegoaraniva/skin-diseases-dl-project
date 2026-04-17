@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import importlib
+import subprocess
+import sys
 from pathlib import Path
 from typing import Dict, List
 
@@ -17,9 +19,28 @@ def _require_google_deps() -> tuple:
         build = importlib.import_module("googleapiclient.discovery").build
         MediaFileUpload = importlib.import_module("googleapiclient.http").MediaFileUpload
     except ImportError as e:  # pragma: no cover
-        raise ImportError(
-            "Faltan dependencias de Google Drive. Instala google-auth, google-auth-oauthlib y google-api-python-client."
-        ) from e
+        subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "pip",
+                "install",
+                "google-auth",
+                "google-auth-oauthlib",
+                "google-api-python-client",
+            ],
+            check=True,
+        )
+        try:
+            Request = importlib.import_module("google.auth.transport.requests").Request
+            Credentials = importlib.import_module("google.oauth2.credentials").Credentials
+            InstalledAppFlow = importlib.import_module("google_auth_oauthlib.flow").InstalledAppFlow
+            build = importlib.import_module("googleapiclient.discovery").build
+            MediaFileUpload = importlib.import_module("googleapiclient.http").MediaFileUpload
+        except ImportError as retry_error:  # pragma: no cover
+            raise ImportError(
+                "Faltan dependencias de Google Drive y no pudieron instalarse automáticamente."
+            ) from retry_error
 
     return Request, Credentials, InstalledAppFlow, build, MediaFileUpload
 
