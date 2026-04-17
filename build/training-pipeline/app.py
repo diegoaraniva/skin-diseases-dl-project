@@ -119,8 +119,7 @@ with col_a:
         else:
             try:
                 flow_data = start_oauth_flow(st.session_state.oauth_client_secret)
-                payload = json.loads(flow_data["state_payload"])
-                st.session_state.oauth_state = payload["state"]
+                st.session_state.oauth_state = flow_data["state"]
                 st.success("Abre el enlace y autoriza la cuenta Google.")
                 st.markdown(f"[Abrir login Google]({flow_data['auth_url']})")
             except Exception as e:  # pragma: no cover

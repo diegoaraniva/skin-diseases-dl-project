@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import importlib
 from pathlib import Path
 from typing import Dict, List
@@ -28,17 +27,17 @@ def _require_google_deps() -> tuple:
 def start_oauth_flow(client_secret_file: str) -> Dict[str, str]:
     _, _, InstalledAppFlow, _, _ = _require_google_deps()
     flow = InstalledAppFlow.from_client_secrets_file(client_secret_file, SCOPES)
-    auth_url, _ = flow.authorization_url(
+    auth_url, state = flow.authorization_url(
         access_type="offline",
         include_granted_scopes="true",
         prompt="consent",
     )
 
-    state_payload = {
+    return {
+        "auth_url": auth_url,
+        "state": state,
         "client_secret_file": str(Path(client_secret_file).resolve()),
-        "state": flow.oauth2session.state,
     }
-    return {"auth_url": auth_url, "state_payload": json.dumps(state_payload)}
 
 
 def finish_oauth_flow(client_secret_file: str, auth_code: str, state: str, token_output_dir: str) -> str:
