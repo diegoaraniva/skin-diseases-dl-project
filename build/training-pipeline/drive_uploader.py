@@ -4,18 +4,28 @@ import json
 from pathlib import Path
 from typing import Dict, List
 
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload
-
 
 SCOPES = ["https://www.googleapis.com/auth/drive.file"]
 TOKEN_FILENAME = "gdrive_token.json"
 
 
+def _require_google_deps() -> tuple:
+    try:
+        from google.auth.transport.requests import Request
+        from google.oauth2.credentials import Credentials
+        from google_auth_oauthlib.flow import InstalledAppFlow
+        from googleapiclient.discovery import build
+        from googleapiclient.http import MediaFileUpload
+    except ImportError as e:  # pragma: no cover
+        raise ImportError(
+            "Faltan dependencias de Google Drive. Instala google-auth, google-auth-oauthlib y google-api-python-client."
+        ) from e
+
+    return Request, Credentials, InstalledAppFlow, build, MediaFileUpload
+
+
 def start_oauth_flow(client_secret_file: str) -> Dict[str, str]:
+    _, _, InstalledAppFlow, _, _ = _require_google_deps()
     flow = InstalledAppFlow.from_client_secrets_file(client_secret_file, SCOPES)
     auth_url, _ = flow.authorization_url(
         access_type="offline",
@@ -31,6 +41,7 @@ def start_oauth_flow(client_secret_file: str) -> Dict[str, str]:
 
 
 def finish_oauth_flow(client_secret_file: str, auth_code: str, state: str, token_output_dir: str) -> str:
+    _, _, InstalledAppFlow, _, _ = _require_google_deps()
     flow = InstalledAppFlow.from_client_secrets_file(client_secret_file, SCOPES, state=state)
     flow.fetch_token(code=auth_code)
 
@@ -42,6 +53,7 @@ def finish_oauth_flow(client_secret_file: str, auth_code: str, state: str, token
 
 
 def _load_credentials(token_file: str) -> Credentials:
+    Request, Credentials, _, _, _ = _require_google_deps()
     token_path = Path(token_file)
     if not token_path.exists():
         raise FileNotFoundError(
@@ -56,6 +68,7 @@ def _load_credentials(token_file: str) -> Credentials:
 
 
 def upload_files_to_drive(token_file: str, drive_folder_id: str, files: List[str]) -> List[Dict[str, str]]:
+    _, _, _, build, MediaFileUpload = _require_google_deps()
     creds = _load_credentials(token_file)
     service = build("drive", "v3", credentials=creds)
 
