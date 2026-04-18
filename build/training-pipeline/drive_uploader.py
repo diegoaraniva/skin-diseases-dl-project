@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import json
 import os
 from pathlib import Path
 from typing import Dict, List
@@ -8,6 +9,7 @@ from typing import Dict, List
 
 SCOPES = ["https://www.googleapis.com/auth/drive.file"]
 TOKEN_FILENAME = "gdrive_token.json"
+OAUTH_STATE_PREFIX = "gdrive_oauth_state"
 DEFAULT_REDIRECT_URI = os.environ.get(
     "GOOGLE_OAUTH_REDIRECT_URI",
     "https://skin-diseases-dl-project-vtgprpplmoyca9fud8yreq.streamlit.app/",
@@ -30,7 +32,37 @@ def _require_google_deps() -> tuple:
     return Request, Credentials, InstalledAppFlow, build, MediaFileUpload
 
 
-def start_oauth_flow(client_secret_file: str) -> Dict[str, str]:
+def _oauth_state_path(token_output_dir: str, state: str) -> Path:
+    token_dir = Path(token_output_dir)
+    token_dir.mkdir(parents=True, exist_ok=True)
+    return token_dir / f"{OAUTH_STATE_PREFIX}_{state}.json"
+
+
+def _save_oauth_state(token_output_dir: str, state: str, code_verifier: str) -> str:
+    state_path = _oauth_state_path(token_output_dir, state)
+    state_path.write_text(
+        json.dumps(
+            {
+                "state": state,
+                "code_verifier": code_verifier,
+                "redirect_uri": DEFAULT_REDIRECT_URI,
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    return str(state_path)
+
+
+def _load_oauth_state(token_output_dir: str, state: str) -> Dict[str, str]:
+    state_path = _oauth_state_path(token_output_dir, state)
+    if not state_path.exists():
+        return {}
+    return json.loads(state_path.read_text(encoding="utf-8"))
+
+
+def start_oauth_flow(client_secret_file: str, token_output_dir: str) -> Dict[str, str]:
     _, _, InstalledAppFlow, _, _ = _require_google_deps()
     flow = InstalledAppFlow.from_client_secrets_file(client_secret_file, SCOPES)
     flow.redirect_uri = DEFAULT_REDIRECT_URI
@@ -43,21 +75,43 @@ def start_oauth_flow(client_secret_file: str) -> Dict[str, str]:
     return {
         "auth_url": auth_url,
         "state": state,
+        "code_verifier": getattr(flow, "code_verifier", ""),
         "redirect_uri": DEFAULT_REDIRECT_URI,
         "client_secret_file": str(Path(client_secret_file).resolve()),
+        "oauth_state_file": _save_oauth_state(token_output_dir, state, getattr(flow, "code_verifier", "")),
     }
 
 
-def finish_oauth_flow(client_secret_file: str, auth_code: str, state: str, token_output_dir: str) -> str:
+def finish_oauth_flow(
+    client_secret_file: str,
+    auth_code: str,
+    state: str,
+    token_output_dir: str,
+    code_verifier: str = "",
+    authorization_response: str = "",
+) -> str:
     _, _, InstalledAppFlow, _, _ = _require_google_deps()
     flow = InstalledAppFlow.from_client_secrets_file(client_secret_file, SCOPES, state=state)
     flow.redirect_uri = DEFAULT_REDIRECT_URI
-    flow.fetch_token(code=auth_code)
+    saved_state = _load_oauth_state(token_output_dir, state)
+    if not code_verifier:
+        code_verifier = saved_state.get("code_verifier", "")
+    if code_verifier:
+        flow.code_verifier = code_verifier
+    if authorization_response:
+        flow.fetch_token(authorization_response=authorization_response, code_verifier=code_verifier or None)
+    else:
+        flow.fetch_token(code=auth_code, code_verifier=code_verifier or None)
 
     token_dir = Path(token_output_dir)
     token_dir.mkdir(parents=True, exist_ok=True)
     token_path = token_dir / TOKEN_FILENAME
     token_path.write_text(flow.credentials.to_json(), encoding="utf-8")
+
+    state_path = _oauth_state_path(token_output_dir, state)
+    if state_path.exists():
+        state_path.unlink()
+
     return str(token_path)
 
 

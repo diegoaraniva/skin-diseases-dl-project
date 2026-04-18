@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from urllib.parse import urlencode
 
 import streamlit as st
 
@@ -32,6 +33,12 @@ if "token_file" not in st.session_state:
     st.session_state.token_file = ""
 if "latest_artifacts" not in st.session_state:
     st.session_state.latest_artifacts = []
+if "oauth_code_verifier" not in st.session_state:
+    st.session_state.oauth_code_verifier = ""
+
+query_params = st.query_params
+oauth_code_from_url = query_params.get("code", "")
+oauth_state_from_url = query_params.get("state", "")
 
 with st.sidebar:
     st.header("Configuración")
@@ -113,6 +120,12 @@ if client_secret_upload is not None:
     st.session_state.oauth_client_secret = str(client_secret_path)
     st.success(f"Archivo OAuth guardado en {client_secret_path}")
 
+# Si el callback llega en otra pestaña/sesion, reutiliza el client_secret ya guardado en disco.
+if not st.session_state.oauth_client_secret:
+    candidate_secret = Path(output_dir) / "client_secret.json"
+    if candidate_secret.exists():
+        st.session_state.oauth_client_secret = str(candidate_secret)
+
 col_a, col_b = st.columns([1, 2])
 with col_a:
     if st.button("Generar enlace de login"):
@@ -120,8 +133,9 @@ with col_a:
             st.error("Primero sube el archivo client_secret.json")
         else:
             try:
-                flow_data = start_oauth_flow(st.session_state.oauth_client_secret)
+                flow_data = start_oauth_flow(st.session_state.oauth_client_secret, output_dir)
                 st.session_state.oauth_state = flow_data["state"]
+                st.session_state.oauth_code_verifier = flow_data.get("code_verifier", "")
                 st.success("Abre el enlace y autoriza la cuenta Google.")
                 st.markdown(f"[Abrir login Google]({flow_data['auth_url']})")
             except Exception as e:  # pragma: no cover
@@ -143,11 +157,32 @@ with col_b:
                     auth_code=auth_code.strip(),
                     state=st.session_state.oauth_state,
                     token_output_dir=output_dir,
+                    code_verifier=st.session_state.oauth_code_verifier,
                 )
                 st.session_state.token_file = token_file
                 st.success(f"Token guardado en {token_file}")
             except Exception as e:  # pragma: no cover
                 st.exception(e)
+
+if oauth_code_from_url and oauth_state_from_url and not st.session_state.token_file:
+    if st.session_state.oauth_client_secret:
+        try:
+            authorization_response = (
+                f"{DEFAULT_REDIRECT_URI}?"
+                f"{urlencode({'code': oauth_code_from_url, 'state': oauth_state_from_url})}"
+            )
+            token_file = finish_oauth_flow(
+                client_secret_file=st.session_state.oauth_client_secret,
+                auth_code=oauth_code_from_url,
+                state=oauth_state_from_url,
+                token_output_dir=output_dir,
+                code_verifier=st.session_state.oauth_code_verifier,
+                authorization_response=authorization_response,
+            )
+            st.session_state.token_file = token_file
+            st.success("Token OAuth creado automaticamente desde la URL de redireccion.")
+        except Exception as e:  # pragma: no cover
+            st.exception(e)
 
 st.divider()
 st.subheader("3) Subida automática de artefactos a Google Drive")
