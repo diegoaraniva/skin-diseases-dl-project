@@ -17,6 +17,7 @@ from pipeline import (
 
 DEFAULT_DRIVE_FOLDER_ID = "1ScflbX21RFYYUHOjy7_lOSacWRYRz5uR"
 DEFAULT_ARTIFACTS_DIR = "artifacts"
+DEFAULT_REDIRECT_URI = "https://skin-diseases-dl-project-vtgprpplmoyca9fud8yreq.streamlit.app/"
 
 
 st.set_page_config(page_title="Skin Diseases Training Trigger", page_icon="🧪", layout="wide")
@@ -100,6 +101,7 @@ if st.button("Iniciar entrenamiento", type="primary"):
 st.divider()
 st.subheader("2) Login OAuth en Google Drive")
 st.write("Sube aquí tu archivo OAuth `client_secret.json` descargado desde Google Cloud Console.")
+st.caption(f"Redirect URI actual: {DEFAULT_REDIRECT_URI} (puedes cambiarlo con GOOGLE_OAUTH_REDIRECT_URI)")
 
 client_secret_upload = st.file_uploader("Archivo client_secret.json", type=["json"])
 

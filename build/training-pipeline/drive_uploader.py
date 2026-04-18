@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -9,6 +10,10 @@ from typing import Dict, List
 
 SCOPES = ["https://www.googleapis.com/auth/drive.file"]
 TOKEN_FILENAME = "gdrive_token.json"
+DEFAULT_REDIRECT_URI = os.environ.get(
+    "GOOGLE_OAUTH_REDIRECT_URI",
+    "https://skin-diseases-dl-project-vtgprpplmoyca9fud8yreq.streamlit.app/",
+)
 
 
 def _require_google_deps() -> tuple:
@@ -48,6 +53,7 @@ def _require_google_deps() -> tuple:
 def start_oauth_flow(client_secret_file: str) -> Dict[str, str]:
     _, _, InstalledAppFlow, _, _ = _require_google_deps()
     flow = InstalledAppFlow.from_client_secrets_file(client_secret_file, SCOPES)
+    flow.redirect_uri = DEFAULT_REDIRECT_URI
     auth_url, state = flow.authorization_url(
         access_type="offline",
         include_granted_scopes="true",
@@ -57,6 +63,7 @@ def start_oauth_flow(client_secret_file: str) -> Dict[str, str]:
     return {
         "auth_url": auth_url,
         "state": state,
+        "redirect_uri": DEFAULT_REDIRECT_URI,
         "client_secret_file": str(Path(client_secret_file).resolve()),
     }
 
@@ -64,6 +71,7 @@ def start_oauth_flow(client_secret_file: str) -> Dict[str, str]:
 def finish_oauth_flow(client_secret_file: str, auth_code: str, state: str, token_output_dir: str) -> str:
     _, _, InstalledAppFlow, _, _ = _require_google_deps()
     flow = InstalledAppFlow.from_client_secrets_file(client_secret_file, SCOPES, state=state)
+    flow.redirect_uri = DEFAULT_REDIRECT_URI
     flow.fetch_token(code=auth_code)
 
     token_dir = Path(token_output_dir)
