@@ -75,13 +75,17 @@ def finish_oauth_flow(
     state: str,
     token_output_dir: str,
     code_verifier: str = "",
+    authorization_response: str = "",
 ) -> str:
     _, _, InstalledAppFlow, _, _ = _require_google_deps()
     flow = InstalledAppFlow.from_client_secrets_file(client_secret_file, SCOPES, state=state)
     flow.redirect_uri = DEFAULT_REDIRECT_URI
     if code_verifier:
         flow.code_verifier = code_verifier
-    flow.fetch_token(code=auth_code, code_verifier=code_verifier or None)
+    if authorization_response:
+        flow.fetch_token(authorization_response=authorization_response, code_verifier=code_verifier or None)
+    else:
+        flow.fetch_token(code=auth_code, code_verifier=code_verifier or None)
 
     token_dir = Path(token_output_dir)
     token_dir.mkdir(parents=True, exist_ok=True)
