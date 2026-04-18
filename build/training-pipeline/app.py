@@ -32,8 +32,6 @@ if "token_file" not in st.session_state:
     st.session_state.token_file = ""
 if "latest_artifacts" not in st.session_state:
     st.session_state.latest_artifacts = []
-if "oauth_code_verifier" not in st.session_state:
-    st.session_state.oauth_code_verifier = ""
 
 with st.sidebar:
     st.header("Configuración")
@@ -124,7 +122,6 @@ with col_a:
             try:
                 flow_data = start_oauth_flow(st.session_state.oauth_client_secret)
                 st.session_state.oauth_state = flow_data["state"]
-                st.session_state.oauth_code_verifier = flow_data.get("code_verifier", "")
                 st.success("Abre el enlace y autoriza la cuenta Google.")
                 st.markdown(f"[Abrir login Google]({flow_data['auth_url']})")
             except Exception as e:  # pragma: no cover
@@ -146,7 +143,6 @@ with col_b:
                     auth_code=auth_code.strip(),
                     state=st.session_state.oauth_state,
                     token_output_dir=output_dir,
-                    code_verifier=st.session_state.oauth_code_verifier,
                 )
                 st.session_state.token_file = token_file
                 st.success(f"Token guardado en {token_file}")

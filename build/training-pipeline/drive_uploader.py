@@ -63,25 +63,16 @@ def start_oauth_flow(client_secret_file: str) -> Dict[str, str]:
     return {
         "auth_url": auth_url,
         "state": state,
-        "code_verifier": getattr(flow, "code_verifier", ""),
         "redirect_uri": DEFAULT_REDIRECT_URI,
         "client_secret_file": str(Path(client_secret_file).resolve()),
     }
 
 
-def finish_oauth_flow(
-    client_secret_file: str,
-    auth_code: str,
-    state: str,
-    token_output_dir: str,
-    code_verifier: str = "",
-) -> str:
+def finish_oauth_flow(client_secret_file: str, auth_code: str, state: str, token_output_dir: str) -> str:
     _, _, InstalledAppFlow, _, _ = _require_google_deps()
     flow = InstalledAppFlow.from_client_secrets_file(client_secret_file, SCOPES, state=state)
     flow.redirect_uri = DEFAULT_REDIRECT_URI
-    if code_verifier:
-        flow.code_verifier = code_verifier
-    flow.fetch_token(code=auth_code, code_verifier=code_verifier or None)
+    flow.fetch_token(code=auth_code)
 
     token_dir = Path(token_output_dir)
     token_dir.mkdir(parents=True, exist_ok=True)
