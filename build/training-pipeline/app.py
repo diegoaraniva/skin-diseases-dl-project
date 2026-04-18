@@ -127,7 +127,7 @@ with col_a:
             st.error("Primero sube el archivo client_secret.json")
         else:
             try:
-                flow_data = start_oauth_flow(st.session_state.oauth_client_secret, output_dir)
+                flow_data = start_oauth_flow(st.session_state.oauth_client_secret)
                 st.session_state.oauth_state = flow_data["state"]
                 st.session_state.oauth_code_verifier = flow_data.get("code_verifier", "")
                 st.success("Abre el enlace y autoriza la cuenta Google.")
