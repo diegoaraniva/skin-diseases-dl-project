@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from urllib.parse import urlencode
 
 import streamlit as st
 
@@ -35,10 +34,6 @@ if "latest_artifacts" not in st.session_state:
     st.session_state.latest_artifacts = []
 if "oauth_code_verifier" not in st.session_state:
     st.session_state.oauth_code_verifier = ""
-
-query_params = st.query_params
-oauth_code_from_url = query_params.get("code", "")
-oauth_state_from_url = query_params.get("state", "")
 
 with st.sidebar:
     st.header("Configuración")
@@ -157,26 +152,6 @@ with col_b:
                 st.success(f"Token guardado en {token_file}")
             except Exception as e:  # pragma: no cover
                 st.exception(e)
-
-if oauth_code_from_url and oauth_state_from_url:
-    if st.session_state.oauth_client_secret and not st.session_state.token_file:
-        try:
-            authorization_response = (
-                f"{DEFAULT_REDIRECT_URI}?"
-                f"{urlencode({'code': oauth_code_from_url, 'state': oauth_state_from_url})}"
-            )
-            token_file = finish_oauth_flow(
-                client_secret_file=st.session_state.oauth_client_secret,
-                auth_code=oauth_code_from_url,
-                state=oauth_state_from_url,
-                token_output_dir=output_dir,
-                code_verifier=st.session_state.oauth_code_verifier,
-                authorization_response=authorization_response,
-            )
-            st.session_state.token_file = token_file
-            st.success("Token OAuth creado automáticamente desde la URL de redirección.")
-        except Exception as e:  # pragma: no cover
-            st.exception(e)
 
 st.divider()
 st.subheader("3) Subida automática de artefactos a Google Drive")
