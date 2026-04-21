@@ -3,3 +3,6 @@ tensorflow
 numpy
 pillow
 gdown
+torch
+transformers
+h5py
