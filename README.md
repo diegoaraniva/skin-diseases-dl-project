@@ -65,7 +65,7 @@ La demo web consume los artefactos publicados en Google Drive y permite hacer pr
 Enlaces:
 - Demo: https://skin-diseases-dl-project-zpa9aq5ussumteuapppbtvc.streamlit.app/
 - Bucket (Google Drive): https://drive.google.com/drive/folders/1ScflbX21RFYYUHOjy7_lOSacWRYRz5uR
-- Video explicativo del flujo: 
+- Video explicativo del flujo: https://youtu.be/4UnUfq0knWU
 
 ## Artefactos esperados en Drive
 
